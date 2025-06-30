@@ -1,0 +1,483 @@
+{
+  "name": "wxTechno - Github Issue Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -920,
+        20
+      ],
+      "id": "f4c9026d-b9df-4497-ba81-963b8800db85",
+      "name": "Schedule Trigger2"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/invertase/react-native-notifee/issues/15",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -700,
+        20
+      ],
+      "id": "d0903b84-bc2f-4866-89b7-98411e1e2e67",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "tableId": "enriched_issues",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "issue_url",
+              "fieldValue": "={{ $json.url }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $json.title }}"
+            },
+            {
+              "fieldId": "creator_login",
+              "fieldValue": "={{ $json.user_login }}"
+            },
+            {
+              "fieldId": "category",
+              "fieldValue": "={{ $json.category }}"
+            },
+            {
+              "fieldId": "assigned_role",
+              "fieldValue": "={{ $json.role }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $json.summary }}"
+            },
+            {
+              "fieldId": "tags",
+              "fieldValue": "={{ $json.tags }}"
+            },
+            {
+              "fieldId": "sentiment",
+              "fieldValue": "={{ $json.sentiment }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        820,
+        20
+      ],
+      "id": "24692137-704d-41be-b012-94f516d52a78",
+      "name": "Create a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "F6prsBTVFRgwewVD",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "magistral-medium-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        320
+      ],
+      "id": "2a0044cc-fa26-42e3-9c06-c148b691959e",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "4lM0FYztfSuh0sYU",
+          "name": "Mistral Cloud account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n    \"title\": \"fix issue\",\n    \"body\": \"body\",\n    \"url\": \"https://issue/\",\n    \"role\": \"Engineering\",\n    \"summary\": \"summary\",\n    \"user_login\": \"frank\",\n    \"tags\": [\"ui\", \"api\"],\n    \"category\": \"Feature Request\",\n  \"sentiment\":\"Positive\"\n  \n}",
+        "autoFix": "={{ true }}",
+        "customizeRetryPrompt": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        120,
+        280
+      ],
+      "id": "0a6d43cc-025e-4337-8c0e-dfc67c5eea6c",
+      "name": "Structured Output Parser",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        120,
+        500
+      ],
+      "id": "e41f6eef-8078-4a9a-9a8c-4e6b469a1cb6",
+      "name": "Mistral Cloud Chat Model1",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "4lM0FYztfSuh0sYU",
+          "name": "Mistral Cloud account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the GitHub issue object provided, summarize clearly in one sentence, and generate relevant tags based on context.\n\nDo NOT include markdown, extra characters, or explanations.\nProvide your response strictly in this JSON format, without any markdown or additional characters:\n{\n  \"url\": \"{{$json.url}}\",\n  \"summary\": \"One-sentence summary\",\n  \"tags\": [\"tag1\", \"tag2\", \"tag3\"],\n  \"user_login\": \"{{$json.user_login}}\",\n  \"body\": \"{{$json.body.replaceSpecialChars()}}\",\n  \"category\": \"Bug\" | \"Feature Request\" | \"Question\" | \"Undetermined\",\n  \"assigned_role\": \"BUG or Feature Request  ='Engineering'\",  \" For inqueries about price demos or business = 'Sales' \" , \"for how to questions or user guidance = 'Support' \",\n  \"title\": \"{{$json.title}}\",\n  \"sentiment\": \"Positive\" | \"Negative\" | \"Neutral\" //Analyze \"sentiment\" based on the {{$json.body}} text.\n}\n\n\n\n\nExample Input:\n{\n  \"body\": \"breaks hmr and causes some duplicate react instances (it was also supposed to fix some of those, seems neither version is correct) Closes WEB-1882\"\n}\n\nExample Output:\n\n{\n  \"summary\": \"Fixes Hot Module Replacement (HMR) issue causing duplicate React instances.\",\n  \"tags\": [\"hmr\", \"react\", \"bug\", \"fix\"],\n  \"sentiment\": \"Negative\"\n}\n\n\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        20
+      ],
+      "id": "edc3f75b-856b-411f-9ffe-8930fa6279fc",
+      "name": "Summary AI Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.assigned_role }}",
+                    "rightValue": "Engineering",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "12735e84-b5d1-459f-8855-f7dfcfc41585"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7b012e9f-e3c9-4fd5-abab-ac802ee35f8a",
+                    "leftValue": "={{ $json.assigned_role }}",
+                    "rightValue": "Sales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d0c4fa92-ade6-49dd-8db1-6fe40b744522",
+                    "leftValue": "={{ $json.assigned_role }}",
+                    "rightValue": "Support",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1160,
+        20
+      ],
+      "id": "2807fe14-1d43-4621-9df6-8dd512bc5c73",
+      "name": "Switch",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=title : {{ $json.title }}\nurl   :{{ $json.url }}\nsummary: {{ $json.summary }}\nbody : {{ $json.body }}\nuser : {{ $json.user_login }}\ntags : {{ $json.tags.toJsonString() }}\ncategory : {{ $json.category }}\ndate : {{ $now }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        -200
+      ],
+      "id": "6c8acc54-124d-4c2a-8d9f-7e5a7e100580",
+      "name": "Engineering Channel",
+      "webhookId": "86fb25e9-fa50-4972-abd5-553972018677",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "VpIwYTtu5RENAVyY",
+          "name": "Discord Webhook account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=title : {{ $json.title }}\nurl   :{{ $json.url }}\nsummary: {{ $json.summary }}\nbody : {{ $json.body }}\nuser : {{ $json.user_login }}\ntags : {{ $json.tags.toJsonString() }}\ncategory : {{ $json.category }}\ndate : {{ $now }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        60
+      ],
+      "id": "83ac1374-1727-48d3-a646-9ac5557d1d8c",
+      "name": "Sales Channel",
+      "webhookId": "86fb25e9-fa50-4972-abd5-553972018677",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "ud1Le2XLuxNfWC5p",
+          "name": "Discord Webhook account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=title : {{ $json.title }}\nurl   :{{ $json.url }}\nsummary: {{ $json.summary }}\nbody : {{ $json.body }}\nuser : {{ $json.user_login }}\ntags : {{ $json.tags.toJsonString() }}\ncategory : {{ $json.category }}\ndate : {{ $now }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        320
+      ],
+      "id": "53214c25-3e34-4cd7-8038-9107a7443121",
+      "name": "Support Channel",
+      "webhookId": "86fb25e9-fa50-4972-abd5-553972018677",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "OpjyPllzwA7f9nAB",
+          "name": "Discord Webhook account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let new_outputs = [];\n\nconst cleanString = (input) => {\n  return input\n    .replace(/<details>[\\s\\S]*?<\\/details>/gi, '') // Remove <details> sections\n    .replace(/<[^>]*>/g, '')  // Remove HTML tags\n    .replace(/\\\\[nrt\"\\\\]/g, ' ')  // Replace escaped \\n, \\r, \\t, \\\", \\\\ with space\n    .replace(/[\\n\\r\\t]+/g, ' ') // Replace real newlines, tabs, returns with space\n    .replace(/\\s{2,}/g, ' ')  // Condense multiple spaces into one\n    .trim();   // Remove leading/trailing whitespace\n};\n\nconst escapeJson = (str) => {\n  return JSON.stringify(str).slice(1, -1);\n};\n\nfor (const item of $input.all()) {\n  new_outputs.push({\n    url: escapeJson(item.json.url),\n    user_login: escapeJson(item.json.user.login),\n    body: escapeJson(cleanString(item.json.body)),\n    title: escapeJson(item.json.title),\n  });\n}\n\nreturn new_outputs;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        20
+      ],
+      "id": "7a2cfd83-b3d5-41fe-86ec-9128cd76b913",
+      "name": "Response Handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(x=>x.json.output)"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        20
+      ],
+      "id": "908f283b-dc52-4427-9e7d-6f0b05b48757",
+      "name": "Output Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Response Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summary AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Summary AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Output Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Engineering Channel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sales Channel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Support Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Handler": {
+      "main": [
+        [
+          {
+            "node": "Summary AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output Code": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "69415072-6f68-4363-b931-1050e0b9650a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "15362f01dd7ddbfac19a8741134c4957129985a14e38b38ef0e27e3d0cab4268"
+  },
+  "id": "uXHsaj3mXXzyxlNs",
+  "tags": []
+}
